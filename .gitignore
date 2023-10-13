@@ -20,8 +20,8 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
-/node_modules
+/backend/node_modules
 .idea
 .env
-.node_modules
+
 ```
