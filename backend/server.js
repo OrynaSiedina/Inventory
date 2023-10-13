@@ -4,6 +4,7 @@ const cors = require('cors');
 const mongoose = require('mongoose').default;
 const bodyParser = require('body-parser');
 const app = express();
+const userRoute = require('./routes/userRoute');
 
 const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.DB_URI)
@@ -19,6 +20,9 @@ mongoose.connect(process.env.DB_URI)
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
 app.use(bodyParser.json());
+
+//----- ROUTES MIDDLEWARE-----
+app.use("/api/users", userRoute);
 
 // -----ROUTES------
 app.get("/", (req, res) => {
