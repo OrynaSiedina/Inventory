@@ -121,18 +121,80 @@ const getUser = asyncHandler(async (req, res) => {
 const loginStatus = asyncHandler(async (req, res) => {
 
     const token = req.cookies.token
-    if(!token) return res.json(false)
+    if (!token) return res.json(false)
 
     const verified = jwt.verify(token, process.env.JWT_SECRET)
-    if (verified) { return res.json(true)}
+    if (verified) {
+        return res.json(true)
+    }
 
     return res.json(false)
 })
 
+const updateUser = asyncHandler(async (req, res) => {
+        const user = await User.findById(req.user._id)
+        if (user) {
+            const {name, email, photo, phone, position} = user
+            user.email = email
+            user.name = req.body.name || name
+            user.photo = req.body.photo || photo
+            user.phone = req.body.phone || phone
+            user.position = req.body.position || position
+
+            const updatedUser = await user.save()
+
+            res.status(200).json({
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                photo: updatedUser.photo,
+                phone: updatedUser.phone,
+                position: updatedUser.position
+            })
+        } else {
+            res.status(404)
+            throw new Error("User not found")
+        }
+    }
+)
+
+const changePassword = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id)
+    const {oldPassword, password} = req.body
+    if (!user){
+        res.status(404)
+        throw new Error("User not found, please sign up")
+    }
+
+    if (!oldPassword || !password) {
+        res.status(400)
+        throw new Error("Please fill all required fields")
+    }
+
+    const passwordIsValid = await bcrypt.compare(oldPassword, user.password)
+    if (!passwordIsValid) {
+        res.status(400)
+        throw new Error("Invalid password")
+    }
+
+    user.password = password
+    await user.save()
+
+    res.status(200).json({
+        message: "Password changed successfully"
+    })
+})
+
+const restorePassword = asyncHandler(async (req, res) => {
+
+})
 module.exports = {
     registerUser,
     loginUser,
     logoutUser,
     getUser,
-    loginStatus
+    loginStatus,
+    updateUser,
+    changePassword,
+    restorePassword
 }
