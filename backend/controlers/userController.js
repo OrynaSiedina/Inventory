@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler')
 const User = require('../models/userModel')
+const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
 const generateToken = (id) => {
@@ -25,10 +26,8 @@ const registerUser = asyncHandler(async (req,res) => {
 
     if(userExists){
         res.status(400)
-        throw new Error("Email has already been used")
+        throw new Error("User with this email already exists")
     }
-
-
 
     const user = await User.create({
         name,
@@ -57,6 +56,48 @@ const registerUser = asyncHandler(async (req,res) => {
     }
 })
 
+const loginUser = asyncHandler(async (req,res) => {
+    const {email, password} = req.body
+
+    if (!email || !password) {
+        res.status(400)
+        throw new Error("Please add email and password")
+    }
+    const user = await User.findOne({email})
+
+    if(!user){
+        res.status(400)
+        throw new Error("Invalid email or password")
+    }
+
+    passwordIsValid = await bcrypt.compare(password, user.password)
+    const {_id, name, photo, phone, position} = user
+
+
+    if(user && passwordIsValid){
+        const token = generateToken(user._id)
+        res.cookie('token', token, {
+            path: '/',
+            httpOnly: true,
+            expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            sameSite: 'none',
+            secure: true
+        })
+        res.status(200).json({
+            _id, name, email, photo, phone, position, token
+        })
+    } else {
+        res.status(400)
+        throw new Error("Invalid email or password")
+    }
+})
+
+const logoutUser = asyncHandler(async (req,res) => {
+    res.send("Logout route")
+})
+
 module.exports = {
-    registerUser
+    registerUser,
+    loginUser,
+    logoutUser
 }
