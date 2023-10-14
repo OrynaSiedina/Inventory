@@ -9,22 +9,22 @@ const generateToken = (id) => {
     })
 }
 
-const registerUser = asyncHandler(async (req,res) => {
+const registerUser = asyncHandler(async (req, res) => {
 
     const {name, email, password} = req.body
 
-    if(!name || !email || !password){
+    if (!name || !email || !password) {
         res.status(400)
         throw new Error("Please fill all required fields")
     }
 
-    if(password.length < 6){
+    if (password.length < 6) {
         res.status(400)
         throw new Error("Password must be at least 6 characters long")
     }
     const userExists = await User.findOne({email: email})
 
-    if(userExists){
+    if (userExists) {
         res.status(400)
         throw new Error("User with this email already exists")
     }
@@ -45,10 +45,10 @@ const registerUser = asyncHandler(async (req,res) => {
         secure: true
     })
 
-    if(user){
-        const {_id, name, email, photo,phone, position} = user
+    if (user) {
+        const {_id, name, email, photo, phone, position} = user
         res.status(201).json({
-            _id, name, email, photo,phone, position, token
+            _id, name, email, photo, phone, position, token
         })
     } else {
         res.status(400)
@@ -56,7 +56,7 @@ const registerUser = asyncHandler(async (req,res) => {
     }
 })
 
-const loginUser = asyncHandler(async (req,res) => {
+const loginUser = asyncHandler(async (req, res) => {
     const {email, password} = req.body
 
     if (!email || !password) {
@@ -65,7 +65,7 @@ const loginUser = asyncHandler(async (req,res) => {
     }
     const user = await User.findOne({email})
 
-    if(!user){
+    if (!user) {
         res.status(400)
         throw new Error("Invalid email or password")
     }
@@ -74,7 +74,7 @@ const loginUser = asyncHandler(async (req,res) => {
     const {_id, name, photo, phone, position} = user
 
 
-    if(user && passwordIsValid){
+    if (user && passwordIsValid) {
         const token = generateToken(user._id)
         res.cookie('token', token, {
             path: '/',
@@ -92,9 +92,19 @@ const loginUser = asyncHandler(async (req,res) => {
     }
 })
 
-const logoutUser = asyncHandler(async (req,res) => {
-    res.send("Logout route")
+const logoutUser = asyncHandler(async (req, res) => {
+    res.cookie('token', '', {
+        path: '/',
+        httpOnly: true,
+        expires: new Date(Date.now()),
+        sameSite: 'none',
+        secure: true
+    })
+    res.status(200).json({
+        message: "Successfully logged out"
+    })
 })
+
 
 module.exports = {
     registerUser,
