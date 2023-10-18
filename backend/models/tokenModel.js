@@ -5,11 +5,10 @@ const tokenSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'User'
-    ,
+    },
     token: {
         type: String,
         required: true
-        }
     },
     createdAt: {
         type: Date,
@@ -19,7 +18,6 @@ const tokenSchema = new mongoose.Schema({
         type: Date,
         required: true,
     }
-
 })
 
 module.exports = mongoose.model('Token', tokenSchema)
