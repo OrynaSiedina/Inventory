@@ -9,6 +9,7 @@ const generateToken = (id) => {
         expiresIn: "1d"
     })
 }
+const hashThis = (token) => { return crypto.createHash("sha256").update(token).digest("hex") }
 
 const registerUser = asyncHandler(async (req, res) => {
 
@@ -133,30 +134,30 @@ const loginStatus = asyncHandler(async (req, res) => {
 })
 
 const updateUser = asyncHandler(async (req, res) => {
-        const user = await User.findById(req.user._id)
-        if (user) {
-            const {name, email, photo, phone, position} = user
-            user.email = email
-            user.name = req.body.name || name
-            user.photo = req.body.photo || photo
-            user.phone = req.body.phone || phone
-            user.position = req.body.position || position
+    const user = await User.findById(req.user._id)
+    if (user) {
+        const {name, email, photo, phone, position} = user
+        user.email = email
+        user.name = req.body.name || name
+        user.photo = req.body.photo || photo
+        user.phone = req.body.phone || phone
+        user.position = req.body.position || position
 
-            const updatedUser = await user.save()
+        const updatedUser = await user.save()
 
-            res.status(200).json({
-                _id: updatedUser._id,
-                name: updatedUser.name,
-                email: updatedUser.email,
-                photo: updatedUser.photo,
-                phone: updatedUser.phone,
-                position: updatedUser.position
-            })
-        } else {
-            res.status(404)
-            throw new Error("User not found")
-        }
-    })
+        res.status(200).json({
+            _id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            photo: updatedUser.photo,
+            phone: updatedUser.phone,
+            position: updatedUser.position
+        })
+    } else {
+        res.status(404)
+        throw new Error("User not found")
+    }
+})
 
 const changePassword = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id)
@@ -194,12 +195,14 @@ const restorePassword = asyncHandler(async (req, res) => {
     }
 
     let token = await Token.findOne({userId: user._id})
-    if(token){
+    if (token) {
         await token.deleteOne()
     }
 
     let resetToken = crypto.randomBytes(32).toString("hex") + user._id
-    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex")
+    const hashedToken = hashThis(resetToken)
+
+    console.log(resetToken)
 
     await new Token({
         userId: user._id,
@@ -235,6 +238,28 @@ const restorePassword = asyncHandler(async (req, res) => {
 
 const resetPassword = asyncHandler(async (req, res) => {
 
+    const {password} = req.body
+
+    const userToken = await Token.findOne({
+        token: hashThis(req.params.resetToken),
+        expiresAt: {$gt: Date.now()}
+    })
+
+    if (!userToken) {
+        res.status(404)
+        throw new Error("Invalid or expired token")
+    }
+
+    const user = await User.findOne({_id: userToken.userId})
+
+    user.password = password
+    await user.save()
+    await userToken.deleteOne()
+
+    res.status(200).json({
+        success: true,
+        message: "Password reset successfully"
+    })
 })
 
 module.exports = {
