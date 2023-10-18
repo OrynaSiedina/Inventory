@@ -1,8 +1,9 @@
 const asyncHandler = require('express-async-handler')
-const User = require('../models/userModel')
+const {User, Token} = require('../models')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-
+const crypto = require('crypto')
+const sendEmail = require('../utils/sendemail')
 const generateToken = (id) => {
     return jwt.sign({id}, process.env.JWT_SECRET, {
         expiresIn: "1d"
@@ -155,13 +156,12 @@ const updateUser = asyncHandler(async (req, res) => {
             res.status(404)
             throw new Error("User not found")
         }
-    }
-)
+    })
 
 const changePassword = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id)
     const {oldPassword, password} = req.body
-    if (!user){
+    if (!user) {
         res.status(404)
         throw new Error("User not found, please sign up")
     }
@@ -186,8 +186,57 @@ const changePassword = asyncHandler(async (req, res) => {
 })
 
 const restorePassword = asyncHandler(async (req, res) => {
+    const {email} = req.body
+    const user = await User.findOne({email})
+    if (!user) {
+        res.status(400)
+        throw new Error("User does not exist")
+    }
+
+    let token = await Token.findOne({userId: user._id})
+    if(token){
+        await token.deleteOne()
+    }
+
+    let resetToken = crypto.randomBytes(32).toString("hex") + user._id
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex")
+
+    await new Token({
+        userId: user._id,
+        token: hashedToken,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + process.env.RESET_PASS_EXPIRE * 60 * 1000
+    }).save()
+
+    const resetUrl = `${process.env.FRONTEND_URL}/resetpassword/${resetToken}`
+    const message = `
+    <h2>Hello ${user.name},</br> you have requested a password reset</h2>
+    <p>Please go to this link to reset your password</p>
+    <a href=${resetUrl} clicktracking=off>${resetUrl}</a>
+    <p>Password reset link will expire in ${process.env.RESET_PASS_EXPIRE} minutes</p>
+    <p> Best regards, </br> Inventory team</p>
+    <p>If you did not request a password reset, please ignore this email</p>`
+
+    const subject = "Password reset request"
+    const send_to = user.email
+    const sent_from = process.env.EMAIL_USER
+
+    try {
+        await sendEmail(subject, message, send_to, sent_from)
+        res.status(200).json({
+            success: true,
+            message: "Reset email sent"
+        })
+    } catch (error) {
+        res.status(500)
+        throw new Error(error.message)
+    }
+})
+
+const resetPassword = asyncHandler(async (req, res) => {
 
 })
+
 module.exports = {
     registerUser,
     loginUser,
@@ -196,5 +245,6 @@ module.exports = {
     loginStatus,
     updateUser,
     changePassword,
-    restorePassword
+    restorePassword,
+    resetPassword
 }
