@@ -4,7 +4,7 @@ const cors = require('cors');
 const mongoose = require('mongoose').default;
 const bodyParser = require('body-parser');
 const app = express();
-const userRoute = require('./routes/userRoute');
+const {userRoute, productRoute} = require('./routes');
 const errorHandler = require('./middlewares/errorMiddleware');
 const cookieParser = require('cookie-parser');
 const PORT = process.env.PORT || 5000;
@@ -22,6 +22,7 @@ app.get("/", (req, res) => {
 })
 //----- ROUTES MIDDLEWARE-----
 app.use("/api/users", userRoute);
+app.use("/api/products", productRoute);
 
 app.use(errorHandler)
 mongoose.connect(process.env.DB_URI)
